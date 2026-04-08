@@ -1,5 +1,5 @@
 import ray
-from ray import Dataset
+from ray.data import Dataset
 from typing import Dict, Any
 import torch
 from .ray_pipeline import PipelineConfig, create_pipeline
@@ -59,4 +59,3 @@ class RayDataloader:
 
     def __len__(self):
         return self._get_dataset().count() // self.batch_size
-    
