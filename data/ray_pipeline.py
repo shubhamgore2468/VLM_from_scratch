@@ -11,18 +11,18 @@ import io
 import torch
 from transformers import AutoTokenizer, AutoProcessor, AutoModel
 
-@dataclass 
+@dataclass
 class PipelineConfig:
     input_path: str
     output_path: str
-    image_base_dir: str
-    image_size = 224
-    patch_size = 16
-    max_text_length = 256
-    num_workers = 4
-    batch_size = 64
-    vision_model_name = "google/siglip-base-patch16-224"
-    text_model_name = "Qwen/Qwen2.5-0.5B"
+    image_base_dir: str = ""
+    image_size: int = 224
+    patch_size: int = 16
+    max_text_length: int = 256
+    num_workers: int = 4
+    batch_size: int = 64
+    vision_model_name: str = "google/siglip-base-patch16-224"
+    text_model_name: str = "Qwen/Qwen2.5-0.5B"
 
 def validate_sample(row, config: PipelineConfig):
     row["valid"] = bool( row.get("image") and row.get("question") and row.get("answer") and len(row["question"].strip()) > 0)
