@@ -130,14 +130,14 @@ def create_pipeline(config: PipelineConfig):
     ds = ds.filter(lambda row: row["valid"])
 
     #load images
-    ds = ds.map(lambda row: load_image(row, config.image_size), num_cpus=0.5) # each task uses half CPU core
+    ds = ds.map(lambda row: load_image(row, config.image_size), num_cpus=1) # each task uses half CPU core
     ds = ds.filter(lambda row: row["valid"])
 
     ds = ds.map_batches( # process data in batches
         TokenizeBatch,
         fn_constructor_kwargs = {"config": config},
         batch_size=config.batch_size,
-        num_cpus=0.5,
+        concurrency=2,
     )
     return ds
 
@@ -145,9 +145,10 @@ def create_pipeline_with_features(config: PipelineConfig):
     ds = create_pipeline(config)
     ds = ds.map_batches(
         ExtractVisionFeature,
-        fn_constructor_kwargs={"config": config}, # passes config to ToekzieBatch constructor
+        fn_constructor_kwargs={"config": config},
         batch_size=config.batch_size,
-        num_cpus=0.5, # each task uses half CPU core
+        num_gpus=1,
+        concurrency=1,  # One GPU worker
     )
     return ds
 
