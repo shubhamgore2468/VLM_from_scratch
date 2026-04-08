@@ -136,3 +136,9 @@ KV-cache speedup (Kaggle T4 GPU):
 | 50     | 1.2       | 0.5          | 2.4x    |
 | 100    | 2.8       | 0.9          | 3.1x    |
 | 200    | 6.5       | 1.7          | 3.8x    |
+|--------|-----------|--------------|---------|
+
+TODO:
+Ray cluster - training on Modal
+MoE
+CUDA kernels optimization. - inference

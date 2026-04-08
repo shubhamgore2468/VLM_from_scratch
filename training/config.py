@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import torch
+from typing import Optional
 
 
 @dataclass
@@ -17,7 +18,7 @@ class TrainingConfig:
     
     # Training hyperparameters
     epochs: int = 1
-    micro_batch_size: int = 4
+    micro_batch_size: int = 4 # Effective batch size = 4*8*2=64 = micro_batch_size * grad_accum_steps * num_gpus
     grad_accum_steps: int = 8
     lr: float = 2e-4
     weight_decay: float = 0.01
@@ -29,6 +30,7 @@ class TrainingConfig:
     use_amp: bool = True
     use_compile: bool = False
     gradient_checkpointing: bool = True
+    early_stop_step: Optional[int] = None
     
     # Data loading
     num_workers: int = 4

@@ -158,6 +158,9 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
     print("=" * 50)
     print("Starting training...")
     print("=" * 50)
+
+    #Calc early stop step:
+    config.early_stop_step = len(dataset) //  config.effective_batch_size
     
     for epoch in range(start_epoch, config.epochs):
         model.train()
@@ -224,6 +227,19 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
                 optimizer.zero_grad()
                 
                 global_step += 1
+
+                # Early stopping
+                if config.early_stop_step and global_step >= config.early_stop_step:
+                    print(f"Early stopping at step {global_step}")
+                    save_checkpoint(
+                        model, optimizer, scheduler, scaler,
+                        epoch, global_step, epoch_loss / num_batches,
+                        config,
+                        os.path.join(config.output_dir, f"early_stop_{global_step}.pt"),
+                    )
+                    if use_wandb:
+                        wandb.finish()
+                    return
                 
                 # Logging
                 if global_step % config.log_interval == 0:
