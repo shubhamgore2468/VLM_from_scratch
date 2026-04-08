@@ -51,7 +51,7 @@ class TokenizeBatch:
     Tokenize text data in batches using pretrained tokenizer.
     '''
     def __init__(self, config: PipelineConfig):
-        self.tokenzier  = AutoTokenizer.from_pretrained(config.text_model_name)
+        self.tokenizer  = AutoTokenizer.from_pretrained(config.text_model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_length = config.max_text_length
@@ -90,10 +90,10 @@ class ExtractVisionFeature:
         images = []
         for img_bytes in batch["image_bytes"]:
             if img_bytes is not None:
-                img = Image.open(io.Bytes(img_bytes)).convert("RGB")
+                img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
                 images.append(img)
             else:
-                images.append(Image.new("RGB", (224,244), (128, 128, 128)))
+                images.append(Image.new("RGB", (224,224), (128, 128, 128)))
 
         inputs = self.processor(images=images, return_tensors='pt')
         pixel_values = inputs["pixel_values"].to(self.device)
