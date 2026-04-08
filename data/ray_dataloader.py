@@ -10,23 +10,24 @@ class RayDataloader:
     RayDataloader wraps a Ray Dataset to provide an iterable dataloader interface.
     '''
     def __init__(
-        self, 
-        data_path, 
-        batch_size, 
-        image_base_dir, 
-        num_workers, 
-        vision_model_name: str = "google/siglip-base-patch16-224", 
+        self,
+        data_path: str,
+        batch_size: int = 4,
+        image_base_dir: str = "/kaggle/input/coco-2017-dataset/coco2017/train2017",
+        num_workers: int = 4,
+        prefetch_batches: int = 2,
+        vision_model_name: str = "google/siglip-base-patch16-224",
         text_model_name: str = "Qwen/Qwen2.5-0.5B",
-        device: str = "cuda"
+        device: str = "cuda",
     ):
-        config = PipelineConfig(
+        self.config = PipelineConfig(
             input_path=data_path,
-            output_path=None,
+            output_path="",  # Not saving
             image_base_dir=image_base_dir,
-            batch_size=batch_size,
             num_workers=num_workers,
-            vision_model_name=vision_model_name,
-            text_model_name=text_model_name
+            batch_size=batch_size * prefetch_batches,
+            vision_model=vision_model_name,
+            text_model=text_model_name,
         )
 
         self.batch_size = batch_size
