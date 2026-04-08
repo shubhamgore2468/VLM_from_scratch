@@ -13,7 +13,8 @@ class RayDataloader:
         self,
         data_path: str,
         batch_size: int = 4,
-        image_base_dir: str = "/kaggle/input/coco-2017-dataset/coco2017/train2017",
+        image_base_dir: str = "/kaggle/input/datasets/awsaf49/coco-2017-dataset/coco2017/train2017",
+        #/kaggle/input/datasets/awsaf49/coco-2017-dataset/coco2017/train2017
         num_workers: int = 4,
         prefetch_batches: int = 2,
         vision_model_name: str = "google/siglip-base-patch16-224",
