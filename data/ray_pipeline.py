@@ -114,7 +114,7 @@ def create_pipeline(config: PipelineConfig):
     ds = ray.data.read_json(config.input_path) # ds is like a distributed table
 
     # validates the samples
-    ds = ds.map(validate_sample)
+    ds = ds.map(lambda row: validate_sample(row, config))    
     ds = ds.filter(lambda row: row["valid"])
 
     #load images
