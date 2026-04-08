@@ -25,7 +25,13 @@ class PipelineConfig:
     text_model_name: str = "Qwen/Qwen2.5-0.5B"
 
 def validate_sample(row, config: PipelineConfig):
-    row["valid"] = bool( row.get("image") and row.get("question") and row.get("answer") and len(row["question"].strip()) > 0)
+    row["valid"] = bool(
+        row.get("image") and 
+        row.get("question") and 
+        row.get("answer") and
+        len(row["question"].strip()) > 0
+    )
+    return row
 
 
 def load_image(row, config: PipelineConfig):
