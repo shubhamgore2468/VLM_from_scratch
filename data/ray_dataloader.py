@@ -46,12 +46,7 @@ class RayDataloader:
     def __iter__(self):
         ds = self._get_dataset()
         for batch in ds.iter_torch_batches(
-            batch_size = self.batch_size,
-            dtypes = {
-                "input_ids": torch.long,
-                "attention_mask": torch.long,
-                "prompt_lens": torch.long,
-            }
+            batch_size = self.batch_size
         ):
             yield{ # yield doesn;t return moves to next batch after this
                 k: v.to(self.device) if isinstance(v, torch.Tensor) else v
