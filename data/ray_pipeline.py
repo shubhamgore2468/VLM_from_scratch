@@ -34,22 +34,28 @@ def validate_sample(row, config: PipelineConfig):
     return row
 
 
-def load_image(row, config: PipelineConfig):
+def load_image(row: Dict[str, Any], image_size: int = 224) -> Dict[str, Any]:
+    """Load and preprocess image to bytes."""
     if not row.get("valid", True):
         row["image_bytes"] = None
         return row
-    image_path = Path(config.image_base_dir) / Path(row["image"]).name
+    
+    # Use path directly from JSON (supports absolute paths)
+    img_path = Path(row["image"])
     
     try:
-        img = Image.open(image_path).convert("RGB")
-        img = img.resize((config.image_size, config.image_size), Image.BILINEAR) # resampling filter calculates pixel by avg 2x2
-        buffer = io.BytesIO() # serialization to bytes for efficient storage the row
-        img.save(buffer, format='JPEG', quality=95) # quality  = compression level
-        row["image_bytes"] = buffer.getvalues()
+        img = Image.open(img_path).convert("RGB")
+        img = img.resize((image_size, image_size), Image.BILINEAR)
+        
+        # Store as bytes for serialization
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=95)
+        row["image_bytes"] = buffer.getvalue()
         row["valid"] = True
     except Exception as e:
         row["image_bytes"] = None
         row["valid"] = False
+    
     return row
 
 class TokenizeBatch:
@@ -124,7 +130,7 @@ def create_pipeline(config: PipelineConfig):
     ds = ds.filter(lambda row: row["valid"])
 
     #load images
-    ds = ds.map(lambda row: load_image(row, config), num_cpus=0.5) # each task uses half CPU core
+    ds = ds.map(lambda row: load_image(row, config.image_size), num_cpus=0.5) # each task uses half CPU core
     ds = ds.filter(lambda row: row["valid"])
 
     ds = ds.map_batches( # process data in batches
