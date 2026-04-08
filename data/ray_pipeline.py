@@ -14,7 +14,7 @@ from transformers import AutoTokenizer, AutoProcessor, AutoModel
 @dataclass
 class PipelineConfig:
     input_path: str
-    output_path: str
+    output_path: str = "/kaggle/working/"
     image_base_dir: str = ""
     image_size: int = 224
     patch_size: int = 16
