@@ -26,8 +26,8 @@ class RayDataloader:
             image_base_dir=image_base_dir,
             num_workers=num_workers,
             batch_size=batch_size * prefetch_batches,
-            vision_model=vision_model_name,
-            text_model=text_model_name,
+            vision_model_name=vision_model_name,
+            text_model_name=text_model_name,
         )
 
         self.batch_size = batch_size
