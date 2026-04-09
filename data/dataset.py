@@ -122,7 +122,7 @@ def prepare_vqa_samples(max_samples: Optional[int] = None) -> List[Dict[str, str
 
     # Process samples
     samples = []
-    for item in data[:20000]:
+    for item in data[:max_samples]:
         convs = item.get("conversations", [])
         if len(convs) < 2:
             continue
@@ -173,8 +173,8 @@ def save_vqa_dataset(
     with open(output_file, "w") as f:
         json.dump(samples, f, indent=2)
     
-    print(f"\n✅ Saved {len(samples)} samples to {output_file}")
-    print("\n🔍 Sample entry:")
+    print(f"\n Saved {len(samples)} samples to {output_file}")
+    print("\n Sample entry:")
     print(json.dumps(samples[0], indent=2))
     
     return output_file
