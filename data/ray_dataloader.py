@@ -50,7 +50,7 @@ class RayDataloader:
                 "image_bytes": batch["image_bytes"],  # Keep as bytes (no conversion)
                 "input_ids": torch.tensor(batch["input_ids"], dtype=torch.long, device=self.device),
                 "attention_mask": torch.tensor(batch["attention_mask"], dtype=torch.long, device=self.device),
-                "prompt_len": batch["prompt_len"].tolist(),
+                "prompt_lens": batch["prompt_lens"].tolist(),
             }
 
 
