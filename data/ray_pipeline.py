@@ -10,6 +10,7 @@ from PIL import Image
 import io
 import torch
 from transformers import AutoTokenizer, AutoProcessor, AutoModel
+import logging
 
 @dataclass
 class PipelineConfig:

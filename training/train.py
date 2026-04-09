@@ -103,7 +103,7 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
             batch_size=config.micro_batch_size,
             num_workers=config.num_workers,
         )
-        dataset_size = 90672  # Or read from JSON
+        dataset_size = len(dataloader) * config.micro_batch_size
     else:
         dataset = VQADataset(
             config.data_path,
@@ -181,18 +181,16 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
         pbar = tqdm(dataloader, desc=f"Epoch {epoch + 1}/{config.epochs}")
         
         for step, batch in enumerate(pbar):
-            # Ray dataloader now handles all preprocessing including pixel_values
             if config.use_ray_dataloader:
-                pixel_values = batch["pixel_values"]  
+                pixel_values = batch["pixel_values"]
+                input_ids = batch["input_ids"]
+                attention_mask = batch["attention_mask"]
                 prompt_lens = batch["prompt_lens"]
             else:
                 pixel_values = batch["pixel_values"].to(device, dtype=config.dtype)
+                input_ids = batch["input_ids"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
                 prompt_lens = batch["prompt_len"]
-            
-            input_ids = batch["input_ids"].to(device) if not config.use_ray_dataloader else batch["input_ids"]
-            attention_mask = batch["attention_mask"].to(device) if not config.use_ray_dataloader else batch["attention_mask"]
-            prompt_lens = batch["prompt_lens"] if config.use_ray_dataloader else batch["prompt_len"]
-
             
             # Forward pass with AMP
             if config.use_amp:
