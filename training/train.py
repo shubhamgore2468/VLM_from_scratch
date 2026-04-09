@@ -181,17 +181,16 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
         pbar = tqdm(dataloader, desc=f"Epoch {epoch + 1}/{config.epochs}")
         
         for step, batch in enumerate(pbar):
+            # Ray dataloader now handles all preprocessing including pixel_values
             if config.use_ray_dataloader:
-                # Decode image bytes to tensor
-                from PIL import Image
-                import io
-                images = [Image.open(io.BytesIO(b)).convert("RGB") for b in batch["image_bytes"]]
-                pixel_values = vision_processor(images=images, return_tensors="pt")["pixel_values"]
-                pixel_values = pixel_values.to(device, dtype=config.dtype)
+                pixel_values = batch["pixel_values"]  
+                prompt_lens = batch["prompt_lens"]
             else:
                 pixel_values = batch["pixel_values"].to(device, dtype=config.dtype)
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
+                prompt_lens = batch["prompt_len"]
+            
+            input_ids = batch["input_ids"].to(device) if not config.use_ray_dataloader else batch["input_ids"]
+            attention_mask = batch["attention_mask"].to(device) if not config.use_ray_dataloader else batch["attention_mask"]
             prompt_lens = batch["prompt_lens"] if config.use_ray_dataloader else batch["prompt_len"]
 
             

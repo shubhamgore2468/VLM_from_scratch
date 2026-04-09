@@ -15,8 +15,8 @@ class RayDataloader:
         batch_size: int = 4,
         image_base_dir: str = "/kaggle/input/datasets/awsaf49/coco-2017-dataset/coco2017/train2017",
         #/kaggle/input/datasets/awsaf49/coco-2017-dataset/coco2017/train2017
-        num_workers: int = 4,
-        prefetch_batches: int = 2,
+        num_workers: int = 2,
+        prefetch_batches: int = 4,
         vision_model_name: str = "google/siglip-base-patch16-224",
         text_model_name: str = "Qwen/Qwen2.5-0.5B",
         device: str = "cuda",
@@ -34,9 +34,10 @@ class RayDataloader:
         self.batch_size = batch_size
         self.device = device
         self._ds = None
+        self._vision_processor = None
 
         if not ray.is_initialized():
-            ray.init(ignore_reinit_error=True)
+            ray.init(ignore_reinit_error=True, num_cpus=2)
 
     def _get_dataset(self):
         if self._ds is None:
@@ -56,3 +57,30 @@ class RayDataloader:
 
     def __len__(self):
         return self._get_dataset().count() // self.batch_size
+
+class RayDataloaderWithFeatures(RayDataloader):
+    """
+    Dataloader that pre-extracts vision features using GPU.
+    Use this when you have a one-time preprocessing step before training.
+    """
+    
+    def __init__(self, parquet_path: str, batch_size: int = 4, device: str = "cuda"):
+        self.batch_size = batch_size
+        self.device = device
+        
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True, num_cpus=2)
+        
+        self._ds = ray.data.read_parquet(parquet_path)
+    
+    def _get_dataset(self):
+        return self._ds
+    
+    def __iter__(self):
+        for batch in self._ds.iter_batches(batch_size=self.batch_size, batch_format="numpy", prefetch_batches=4):
+            yield {
+                "vision_features": torch.tensor(batch["vision_features"], dtype=torch.float16).pin_memory().to(self.device, non_blocking=True),
+                "input_ids": torch.tensor(batch["input_ids"], dtype=torch.long).pin_memory().to(self.device, non_blocking=True),
+                "attention_mask": torch.tensor(batch["attention_mask"], dtype=torch.long).pin_memory().to(self.device, non_blocking=True),
+                "prompt_lens": batch["prompt_lens"].tolist(),
+            }

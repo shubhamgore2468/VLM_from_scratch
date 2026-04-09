@@ -33,8 +33,8 @@ class TrainingConfig:
     early_stop_step: Optional[int] = None
     
     # Data loading
-    num_workers: int = 4
-    prefetch_factor: int = 2
+    num_workers: int = 2
+    prefetch_factor: int = 4
     data_path: str = "/kaggle/working/vqa_llava_train.json"
     use_ray_dataloader: bool = True
     

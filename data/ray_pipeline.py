@@ -107,7 +107,7 @@ class ExtractVisionFeature:
             else:
                 images.append(Image.new("RGB", (224,224), (128, 128, 128)))
 
-        inputs = self.processor(images=images, return_tensors='pt')
+        inputs = self.vision_processor(images=images, return_tensors='pt')
         pixel_values = inputs["pixel_values"].to(self.device)
 
         with torch.no_grad():
@@ -137,7 +137,8 @@ def create_pipeline(config: PipelineConfig):
         TokenizeBatch,
         fn_constructor_kwargs = {"config": config},
         batch_size=config.batch_size,
-        concurrency=2,
+        concurrency=1,
+        num_cpus=0.5
     )
     return ds
 
