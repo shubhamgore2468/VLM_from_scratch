@@ -3,6 +3,7 @@ from ray.data import Dataset
 from typing import Dict, Any
 import torch
 from .ray_pipeline import PipelineConfig, create_pipeline
+import logging
 
 
 class RayDataloader:
@@ -37,7 +38,7 @@ class RayDataloader:
         self._vision_processor = None
 
         if not ray.is_initialized():
-            ray.init(ignore_reinit_error=True, num_cpus=2)
+            ray.init(ignore_reinit_error=True, num_cpus=2, logging_level=logging.WARNING, log_to_driver=False,)
 
     def _get_dataset(self):
         if self._ds is None:

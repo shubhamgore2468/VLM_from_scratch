@@ -167,7 +167,7 @@ def run_pipeline(config: PipelineConfig, extract_features: bool = False):
     """Run the full pipeline."""
 
     # Initialize Ray
-    ray.init(ignore_reinit_error=True)
+    ray.init(ignore_reinit_error=True, logging_level=logging.WARNING, log_to_driver=False)
 
     print(f"Processing {config.input_path}")
     print(f"Workers: {config.num_workers}")
