@@ -36,6 +36,7 @@ class TrainingConfig:
     num_workers: int = 4
     prefetch_factor: int = 2
     data_path: str = "/kaggle/working/vqa_llava_train.json"
+    use_ray_dataloader: bool = True
     
     # Checkpointing and logging
     output_dir: str = "./checkpoints"

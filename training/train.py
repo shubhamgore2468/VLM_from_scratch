@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from .config import TrainingConfig
 from ..data.dataset import VQADataset, collate_fn
+from ..data.ray_dataloader import RayDataloader
 from ..models.projector import create_projector
 from ..models.vlm import VLMTraining
 from ..engine.utils import save_checkpoint, load_checkpoint
@@ -94,28 +95,35 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
         print(f"Using {num_gpus} GPUs with DataParallel")
         model = torch.nn.DataParallel(model)
     model = model.to(device)
+
+    #Load dataset with RayDataloader or PyTorch DataLoader
+    if config.use_ray_dataloader:
+        dataloader = RayDataloader(
+            data_path=config.data_path,
+            batch_size=config.micro_batch_size,
+            num_workers=config.num_workers,
+        )
+        dataset_size = 90672  # Or read from JSON
+    else:
+        dataset = VQADataset(
+            config.data_path,
+            vision_processor,
+            tokenizer,
+            config,
+        )
+        dataloader = DataLoader(
+            dataset,
+            batch_size=config.micro_batch_size,
+            shuffle=True,
+            num_workers=config.num_workers, # parallel CPU workers for loading data
+            pin_memory=True, # faster transfer CPU->GPU
+            prefetch_factor=config.prefetch_factor,
+            collate_fn=collate_fn, # custom batch fun - text length s vary
+            drop_last=True, # drops incomplete batch
+        )
+        dataset_size = len(dataset)
     
-    # Load dataset
-    print("Loading dataset...")
-    dataset = VQADataset(
-        config.data_path,
-        vision_processor,
-        tokenizer,
-        config,
-    )
-    print(f"Dataset size: {len(dataset)}")
-    
-    dataloader = DataLoader(
-        dataset,
-        batch_size=config.micro_batch_size,
-        shuffle=True,
-        num_workers=config.num_workers,
-        pin_memory=True,
-        prefetch_factor=config.prefetch_factor,
-        collate_fn=collate_fn,
-        drop_last=True,
-    )
-    
+
     # Optimizer (only projector params)
     if hasattr(model, "module"):
         optimizer_params = model.module.projector.parameters()
@@ -130,7 +138,7 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
     )
     
     # LR scheduler
-    total_steps = len(dataloader) * config.epochs // config.grad_accum_steps
+    total_steps = dataset_size // config.effective_batch_size * config.epochs
     warmup_steps = int(total_steps * config.warmup_ratio)
     print(f"Total steps: {total_steps}, Warmup steps: {warmup_steps}")
     
@@ -160,7 +168,8 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
     print("=" * 50)
 
     #Calc early stop step:
-    config.early_stop_step = len(dataset) //  config.effective_batch_size
+    config.early_stop_step = dataset_size // config.effective_batch_size
+
     
     for epoch in range(start_epoch, config.epochs):
         model.train()
@@ -172,10 +181,19 @@ def train(config: TrainingConfig, resume_path: Optional[str] = None):
         pbar = tqdm(dataloader, desc=f"Epoch {epoch + 1}/{config.epochs}")
         
         for step, batch in enumerate(pbar):
-            pixel_values = batch["pixel_values"].to(device, dtype=config.dtype)
+            if config.use_ray_dataloader:
+                # Decode image bytes to tensor
+                from PIL import Image
+                import io
+                images = [Image.open(io.BytesIO(b)).convert("RGB") for b in batch["image_bytes"]]
+                pixel_values = vision_processor(images=images, return_tensors="pt")["pixel_values"]
+                pixel_values = pixel_values.to(device, dtype=config.dtype)
+            else:
+                pixel_values = batch["pixel_values"].to(device, dtype=config.dtype)
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            prompt_lens = batch["prompt_len"]
+            prompt_lens = batch["prompt_lens"] if config.use_ray_dataloader else batch["prompt_len"]
+
             
             # Forward pass with AMP
             if config.use_amp:
