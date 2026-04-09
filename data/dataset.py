@@ -117,40 +117,29 @@ def prepare_vqa_samples(max_samples: Optional[int] = None) -> List[Dict[str, str
     Returns:
         List of sample dicts with image, question, answer keys
     """
-    from datasets import load_dataset
-    
-    print("Loading LLaVA-Instruct-150K...")
-    ds = load_dataset("liuhaotian/LLaVA-Instruct-150K", split="train", streaming=True)
+    with open("/kaggle/input/datasets/foxtrot22/llava-instruct-150k/llava_instruct_150k.json") as f:
+        data = json.load(f)
+
+    # Process samples
     samples = []
-    count = 0
-    
-    for item in tqdm(ds, desc="Processing LLaVA"):
-        if max_samples and count >= max_samples:
-            break
-            
+    for item in data[:20000]:
         convs = item.get("conversations", [])
         if len(convs) < 2:
             continue
-            
-        img_id = item.get("id", str(count))
         
-        for i in range(0, len(convs) - 1, 2):
-            if convs[i].get("from") == "human" and convs[i + 1].get("from") == "gpt":
+        for i in range(0, len(convs)-1, 2):
+            if convs[i].get("from") == "human" and convs[i+1].get("from") == "gpt":
                 question = convs[i].get("value", "").replace("<image>\n", "").strip()
-                answer = convs[i + 1].get("value", "").strip()
+                answer = convs[i+1].get("value", "").strip()
                 
                 if question and answer:
-                    img_name = item.get("image", f"coco_{img_id}.jpg")
+                    img_name = item.get("image", "")
                     samples.append({
                         "image": f"/kaggle/input/datasets/awsaf49/coco-2017-dataset/coco2017/train2017/{img_name}",
                         "question": question,
-                        "answer": answer,
+                        "answer": answer
                     })
-                    count += 1
-                    
-                    if max_samples and count >= max_samples:
-                        break
-    
+
     return samples
 
 
