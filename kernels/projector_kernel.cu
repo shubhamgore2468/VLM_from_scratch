@@ -14,7 +14,7 @@ __global__ void gelu(const float * input, float * output, int n){
     if (i>=n) return;
     float x = input[i];
     output[i] = x * 0.5f * (1.0f + tanhf(0.7978845608f * (x + 0.044715f * x * x * x)));
-
+    
 }
 
 torch::Tensor gelu_forward(torch::Tensor input) {
@@ -24,13 +24,15 @@ torch::Tensor gelu_forward(torch::Tensor input) {
     auto output = torch::empty_like(input);
     int n = input.numel(); // (1024, 768) → 1024 * 768 = 786,432. flattens the array to 1D
     int threadsPerBlock = 256;
-    int blocksPergrid = ( N + threadsPerBlock - 1) / threadsPerBlock; // ceil(N / threadsPerBlock)
+    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
 
     gelu<<<blocksPerGrid, threadsPerBlock>>>(
         input.data_ptr<float>(),
         output.data_ptr<float>(),
         n
-    )
+    );
+
+    return output;
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

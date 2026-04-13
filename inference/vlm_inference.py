@@ -1,7 +1,6 @@
 """VLM inference with KV-cache optimization."""
 
 from typing import Optional
-from torch.utils.cpp_extension import load
 import torch
 import torch.nn as nn
 from transformers import (
@@ -13,11 +12,6 @@ from transformers import (
 from PIL import Image
 from ..models.projector import LinearProjector
 
-
-custom_gelu = load(name="custom_gelu", sources=["kernels/gelu_kernel.cu"], verbose=True)
-class CUDAGelu(nn.Module):
-    def forward(self, x):
-        return custom_gelu.forward(x.float()).to(x.dtype)
 class VLMInference(nn.Module):
     """
     Inference module for VLM with KV-cache support.
@@ -91,6 +85,16 @@ class VLMInference(nn.Module):
     def _create_projector(self, vision_dim, text_dim, use_cuda_gelu=False):
         projector = LinearProjector(vision_dim, text_dim, dtype=self.dtype)
         if use_cuda_gelu:
+            import os
+            kernel_path = os.path.join(os.path.dirname(__file__), "..", "kernels", "gelu_kernel.cu")
+            kernel_path = os.path.abspath(kernel_path)
+            from torch.utils.cpp_extension import load
+            custom_gelu = load(name="custom_gelu", sources=[kernel_path], verbose=True)
+            
+            class CUDAGelu(torch.nn.Module):
+                def forward(self, x):
+                    return custom_gelu.forward(x.float()).to(x.dtype)
+            
             projector.act = CUDAGelu()
         return projector
     
