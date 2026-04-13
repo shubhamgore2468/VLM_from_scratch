@@ -1,7 +1,7 @@
 """VLM inference with KV-cache optimization."""
 
 from typing import Optional
-
+from torch.utils.cpp_extension import load
 import torch
 import torch.nn as nn
 from transformers import (
@@ -11,8 +11,13 @@ from transformers import (
     AutoModelForCausalLM,
 )
 from PIL import Image
+from ..models.projector import LinearProjector
 
 
+custom_gelu = load(name="custom_gelu", sources=["kernels/gelu_kernel.cu"], verbose=True)
+class CUDAGelu(nn.Module):
+    def forward(self, x):
+        return custom_gelu.forward(x.float()).to(x.dtype)
 class VLMInference(nn.Module):
     """
     Inference module for VLM with KV-cache support.
@@ -28,6 +33,7 @@ class VLMInference(nn.Module):
         projector_checkpoint: Optional[str] = None,
         device: str = "cuda",
         dtype: torch.dtype = torch.float16,
+        use_cuda_gelu: bool = False,
     ):
         """
         Initialize VLM for inference.
@@ -82,33 +88,15 @@ class VLMInference(nn.Module):
         
         print(f"VLM ready! Vision: {vision_dim}, Text: {text_dim}")
     
-    def _create_projector(self, vision_dim: int, text_dim: int) -> nn.Module:
-        """Create projector matching training architecture."""
-        return nn.Sequential(
-            nn.LayerNorm(vision_dim),
-            nn.Linear(vision_dim, text_dim),
-            nn.GELU(),
-            nn.Linear(text_dim, text_dim),
-        ).to(self.dtype)
+    def _create_projector(self, vision_dim, text_dim, use_cuda_gelu=False):
+        projector = LinearProjector(vision_dim, text_dim, dtype=self.dtype)
+        if use_cuda_gelu:
+            projector.act = CUDAGelu()
+        return projector
     
-    def _load_projector(self, checkpoint_path: str):
-        """Load projector weights from checkpoint."""
-        print(f"Loading projector from {checkpoint_path}")
+    def _load_projector(self, checkpoint_path):
         ckpt = torch.load(checkpoint_path, map_location=self.device)
-        state_dict = ckpt["projector_state_dict"]
-        
-        # Map from named module to sequential indices
-        new_state_dict = {
-            "0.weight": state_dict["norm.weight"],
-            "0.bias": state_dict["norm.bias"],
-            "1.weight": state_dict["fc1.weight"],
-            "1.bias": state_dict["fc1.bias"],
-            "3.weight": state_dict["fc2.weight"],
-            "3.bias": state_dict["fc2.bias"],
-        }
-        
-        self.projector.load_state_dict(new_state_dict)
-        print(f"Loaded! (loss={ckpt.get('loss', 'N/A'):.4f}, step={ckpt.get('step', 'N/A')})")
+        self.projector.load_state_dict(ckpt["projector_state_dict"])  # keys match directly
     
     def encode_image(self, image: Image.Image) -> torch.Tensor:
         """
