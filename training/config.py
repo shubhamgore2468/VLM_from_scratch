@@ -11,7 +11,7 @@ class TrainingConfig:
     
     # Model settings
     vision_model_name: str = "google/siglip-base-patch16-224"
-    text_model_name: str = "Qwen/Qwen2.5-0.5B"
+    text_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct"
     image_size: int = 224
     patch_size: int = 16
     max_text_length: int = 256

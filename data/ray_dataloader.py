@@ -20,7 +20,7 @@ class RayDataloader:
         num_workers: int = 2,
         prefetch_batches: int = 4,
         vision_model_name: str = "google/siglip-base-patch16-224",
-        text_model_name: str = "Qwen/Qwen2.5-0.5B",
+        text_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct",
         device: str = "cuda",
         dtype: torch.dtype = torch.float16,
     ):

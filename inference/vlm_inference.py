@@ -24,7 +24,7 @@ class VLMInference(nn.Module):
     def __init__(
         self,
         vision_model_name: str = "google/siglip-base-patch16-224",
-        text_model_name: str = "Qwen/Qwen2.5-0.5B",
+        text_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct",
         projector_checkpoint: Optional[str] = None,
         device: str = "cuda",
         dtype: torch.dtype = torch.float16,

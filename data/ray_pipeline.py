@@ -23,7 +23,7 @@ class PipelineConfig:
     num_workers: int = 4
     batch_size: int = 64
     vision_model_name: str = "google/siglip-base-patch16-224"
-    text_model_name: str = "Qwen/Qwen2.5-0.5B"
+    text_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct"
 
 def validate_sample(row, config: PipelineConfig):
     row["valid"] = bool(
