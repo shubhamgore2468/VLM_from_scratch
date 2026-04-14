@@ -50,7 +50,7 @@ class VLMInference(nn.Module):
         projector_checkpoint: Optional[str] = None,
         device: str = "cuda",
         dtype: torch.dtype = torch.float16,
-        use_cuda_gelu: bool = False,
+        use_cuda_kernels: bool = False,
     ):
         """
         Initialize VLM for inference.
