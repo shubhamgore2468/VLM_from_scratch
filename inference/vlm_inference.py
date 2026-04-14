@@ -1,5 +1,6 @@
 """VLM inference with KV-cache optimization."""
 
+import os
 from typing import Optional
 import torch
 import torch.nn as nn
@@ -11,6 +12,28 @@ from transformers import (
 )
 from PIL import Image
 from ..models.projector import LinearProjector
+from torch.utils.cpp_extension import load
+
+class CUDALayerNorm(torch.nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones(dim))
+        self.bias = torch.nn.Parameter(torch.zeros(dim))
+
+    def forward(self, x):
+        orig_dtype = x.dtype
+        return custom_kernel.layernorm_forward(
+            x.float().contiguous(),
+            self.weight.float(),
+            self.bias.float()
+        ).to(orig_dtype)
+
+
+class CUDAGelu(torch.nn.Module):
+    def forward(self, x):
+        orig_dtype = x.dtype
+        return custom_kernel.gelu_forward(x.float().contiguous()).to(orig_dtype)
+
 
 class VLMInference(nn.Module):
     """
@@ -82,20 +105,27 @@ class VLMInference(nn.Module):
         
         print(f"VLM ready! Vision: {vision_dim}, Text: {text_dim}")
     
-    def _create_projector(self, vision_dim, text_dim, use_cuda_gelu=False):
+    def _create_projector(self, vision_dim, text_dim, use_cuda_kernels=False):
         projector = LinearProjector(vision_dim, text_dim, dtype=self.dtype)
-        if use_cuda_gelu:
+        if use_cuda_kernels:
             import os
-            kernel_path = os.path.join(os.path.dirname(__file__), "..", "kernels", "gelu_kernel.cu")
-            kernel_path = os.path.abspath(kernel_path)
             from torch.utils.cpp_extension import load
-            custom_gelu = load(name="custom_gelu", sources=[kernel_path], verbose=True)
-            
-            class CUDAGelu(torch.nn.Module):
-                def forward(self, x):
-                    return custom_gelu.forward(x.float()).to(x.dtype)
-            
+
+            kernel_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "kernels", "projector_kernel.cu")
+            )
+            global custom_kernel
+            custom_kernel = load(name="projector_ops", sources=[kernel_path], verbose=True)
+
+            # Replace LayerNorm — transfer learned weights
+            cuda_norm = CUDALayerNorm(vision_dim)
+            cuda_norm.weight = projector.norm.weight
+            cuda_norm.bias = projector.norm.bias
+            projector.norm = cuda_norm
+
+            # Replace GELU
             projector.act = CUDAGelu()
+
         return projector
     
     def _load_projector(self, checkpoint_path):
